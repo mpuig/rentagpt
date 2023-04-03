@@ -12,4 +12,4 @@ ADD data ./data
 RUN pip install -r requirements.txt
 
 # Start the application
-CMD ["/usr/local/bin/uvicorn", "--host", "0.0.0.0", "--port", "8000", "srcs.main:app", "--reload", "--workers", "1"]
+CMD ["/usr/local/bin/uvicorn", "--host", "0.0.0.0", "--port", "8000", "src.main:app", "--reload", "--workers", "1"]
