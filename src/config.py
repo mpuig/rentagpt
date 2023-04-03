@@ -23,7 +23,7 @@ class ProvidersConfig(BaseModel):
 
 class ChromaConfig(BaseModel):
     persist_directory: str = os.path.join(data_path, "data")
-    collection_name: str
+    collection_name: str = "renta22"
 
 
 class Config(BaseSettings):
