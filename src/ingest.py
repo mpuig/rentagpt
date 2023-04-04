@@ -9,10 +9,10 @@ from bs4 import BeautifulSoup
 from langchain.document_loaders import UnstructuredURLLoader
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.schema import Document
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 
-from src.config import cfg
+from config import cfg
 
 TEXT_TO_REMOVE = """
 Generar PDF
@@ -63,10 +63,46 @@ def get_all_links(starting_url: str, url_prefix: str) -> List[str]:
         return []
 
 
+def delete_substrings(input_strings: List[str]) -> List[str]:
+    """Delete strings whose superstring is already in the list."""
+    sorted_strings = sorted(input_strings, key=len)
+    return [j for i, j in enumerate(sorted_strings) if all(j not in k for k in sorted_strings[i + 1:])]
+
+
 def crawl_aeat() -> List[str]:
+    print("Crawling AEAT website")
     starting_url = "https://sede.agenciatributaria.gob.es/Sede/Ayuda/22Manual/100.html"
     url_prefix = "https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2022"
-    return get_all_links(starting_url, url_prefix)
+    links = get_all_links(starting_url, url_prefix)
+    print("Candidate links", len(links))
+
+    # some cleanup
+    leafs_strings = delete_substrings([link.replace(".html", "") for link in links])
+    no_duplicated_links = [link + ".html" for link in leafs_strings]
+
+    links_to_skip = (
+        "numero-identificacion-publicacion.html",
+        "presentacion.html",
+        "normativa.html",
+        "normativa-basica-estatal.html"
+        "normativa-autonomica-irpf.html",
+        "normativa-autonomica-irpf/asturias.html",
+        "normativa-autonomica-irpf/baleares.html",
+        "normativa-autonomica-irpf/canarias.html",
+        "normativa-autonomica-irpf/cantabria.html",
+        "normativa-autonomica-irpf/castilla-mancha.html",
+        "normativa-autonomica-irpf/castilla-leon.html",
+        "normativa-autonomica-irpf/cataluna.html",
+        "normativa-autonomica-irpf/extremadura.html",
+        "normativa-autonomica-irpf/galicia.html",
+        "normativa-autonomica-irpf/madrid.html",
+        "normativa-autonomica-irpf/murcia.html",
+        "normativa-autonomica-irpf/rioja.html"
+        "normativa-autonomica-irpf/valencia.html"
+    )
+    final_list = list(filter(lambda x: not x.endswith(links_to_skip), no_duplicated_links))
+    print("Final list of links", len(links))
+    return final_list
 
 
 def load_links(links: List[str]) -> List[Document]:
@@ -74,11 +110,14 @@ def load_links(links: List[str]) -> List[Document]:
     pickle_docs_file = f"{cfg.data_directory}/documents.pkl"
 
     if os.path.exists(pickle_docs_file):
+        print("Pickle version of docs found. Loading it")
         with open(pickle_docs_file, "rb") as fp:
             documents = pickle.load(fp)
     else:
+        print("No pickle version of docs found. Downloading links")
         loader = UnstructuredURLLoader(urls=links)
         downloaded_docs = loader.load()
+        print("Downloaded docs", len(downloaded_docs))
         documents = [fix_document(doc) for doc in downloaded_docs]
         with open(pickle_docs_file, "wb") as fp:
             pickle.dump(documents, fp)
@@ -95,9 +134,11 @@ def create_embeddings(documents: List[Document]) -> List[Document]:
     )
 
     if not os.path.exists(embeddings_file):
-        text_splitter = CharacterTextSplitter.from_tiktoken_encoder(
-            chunk_size=250,
-            chunk_overlap=0
+        print("No embeddings file found. Calculating embeddings.")
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=50,
+            length_function=len,
         )
         split_documents = text_splitter.split_documents(documents)
         client = Chroma.from_documents(
@@ -115,7 +156,7 @@ if __name__ == "__main__":
     print(f"Links: {len(links)}")
 
     documents = load_links(links)
-    print(f"Num of downloaded documents: {len(documents)}")
+    print(f"Num of loaded documents: {len(documents)}")
 
     split_documents = create_embeddings(documents)
     print(f"Num of split documents: {len(split_documents)}")

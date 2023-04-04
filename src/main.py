@@ -12,7 +12,7 @@ from langchain import OpenAI, LLMChain
 from langchain import PromptTemplate
 from langchain.callbacks.base import AsyncCallbackManager
 from langchain.embeddings import OpenAIEmbeddings
-from langchain.text_splitter import CharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import VectorStore, Chroma
 
 from src.callback import StreamingLLMCallbackHandler
@@ -51,9 +51,10 @@ async def startup_event():
         documents = pickle.load(f)
 
     if not os.path.exists(embeddings_file):
-        text_splitter = CharacterTextSplitter.from_tiktoken_encoder(
-            chunk_size=250,
-            chunk_overlap=0,
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=50,
+            length_function=len,
         )
         client = Chroma.from_documents(
             documents=text_splitter.split_documents(documents),
