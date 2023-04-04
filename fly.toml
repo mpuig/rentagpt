@@ -1,0 +1,10 @@
+# fly.toml file generated for rentagpt on 2023-04-04T12:00:23+02:00
+
+app = "rentagpt"
+primary_region = "mad"
+
+[build]
+  builder = "paketobuildpacks/builder:base"
+
+[env]
+  PORT = "8080"
