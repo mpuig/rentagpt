@@ -95,9 +95,9 @@
             }
         }
         let endpoint = "ws://localhost:8000/chat";
-        if (window.location.hostname.indexOf("rentagpt.com") > 0) {
+        if (window.location.hostname.indexOf("rentagpt.com") === 1) {
             endpoint = "ws://rentagpt.com/chat";
-        } else if (window.location.hostname.indexOf("rentagpt.fly.dev") > 0) {
+        } else if (window.location.hostname.indexOf("rentagpt.fly.dev") === 1) {
             endpoint = "ws://rentagpt.fly.dev/chat";
         }
         let ws = new WebSocket(endpoint);
