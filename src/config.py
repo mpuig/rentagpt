@@ -22,7 +22,7 @@ class ProvidersConfig(BaseModel):
 
 
 class ChromaConfig(BaseModel):
-    persist_directory: str = os.path.join(data_path, "data")
+    persist_directory: str = os.path.join(data_path, "data", "chroma")
     collection_name: str = "renta22"
 
 
@@ -30,6 +30,7 @@ class Config(BaseSettings):
     api: APIConfig
     providers: ProvidersConfig
     chroma: ChromaConfig
+    data_directory: str = os.path.join(data_path, "data")
 
     class Config:
         env_file = "../.env"

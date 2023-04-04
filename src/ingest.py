@@ -32,6 +32,13 @@ Todo el documento
 Puede cancelar la generación del PDF en cualquier momento."""
 
 
+def fix_document(doc: Document) -> Document:
+    return Document(
+        page_content=ftfy.fix_text(doc.page_content).replace(TEXT_TO_REMOVE, ""),
+        metadata=doc.metadata,
+    )
+
+
 def get_all_links(starting_url: str, url_prefix: str) -> List[str]:
     try:
         response = requests.get(starting_url)
@@ -56,17 +63,15 @@ def get_all_links(starting_url: str, url_prefix: str) -> List[str]:
         return []
 
 
-def fix_document(doc: Document) -> Document:
-    return Document(
-        page_content=ftfy.fix_text(doc.page_content).replace(TEXT_TO_REMOVE, ""),
-        metadata=doc.metadata,
-    )
+def crawl_aeat() -> List[str]:
+    starting_url = "https://sede.agenciatributaria.gob.es/Sede/Ayuda/22Manual/100.html"
+    url_prefix = "https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2022"
+    return get_all_links(starting_url, url_prefix)
 
 
-def ingest_docs(links: List[str]) -> None:
+def load_links(links: List[str]) -> List[Document]:
     """Get documents from web pages."""
-    pickle_docs_file = f"{cfg.chroma.persist_directory}/documents.pkl"
-    embeddings_file = f"{cfg.chroma.persist_directory}/chroma-embeddings.parquet"
+    pickle_docs_file = f"{cfg.data_directory}/documents.pkl"
 
     if os.path.exists(pickle_docs_file):
         with open(pickle_docs_file, "rb") as fp:
@@ -77,9 +82,13 @@ def ingest_docs(links: List[str]) -> None:
         documents = [fix_document(doc) for doc in downloaded_docs]
         with open(pickle_docs_file, "wb") as fp:
             pickle.dump(documents, fp)
+    return documents
 
-    print(f"Num of downloaded documents: {len(documents)}")
 
+def create_embeddings(documents: List[Document]) -> List[Document]:
+    split_documents = []
+
+    embeddings_file = f"{cfg.chroma.persist_directory}/chroma-embeddings.parquet"
     embeddings = OpenAIEmbeddings(
         openai_api_key=cfg.providers.openai.api_key,
         model="text-embedding-ada-002",
@@ -87,22 +96,26 @@ def ingest_docs(links: List[str]) -> None:
 
     if not os.path.exists(embeddings_file):
         text_splitter = CharacterTextSplitter.from_tiktoken_encoder(
-            chunk_size=250, chunk_overlap=0
+            chunk_size=250,
+            chunk_overlap=0
         )
+        split_documents = text_splitter.split_documents(documents)
         client = Chroma.from_documents(
-            documents=text_splitter.split_documents(documents),
+            documents=split_documents,
             embedding=embeddings,
             collection_name=cfg.chroma.collection_name,
             persist_directory=cfg.chroma.persist_directory,
         )
         client.persist()
+    return split_documents
 
 
 if __name__ == "__main__":
-    # Crawl AEAT docs about Renta 2022
-    starting_url = "https://sede.agenciatributaria.gob.es/Sede/Ayuda/22Manual/100.html"
-    url_prefix = "https://sede.agenciatributaria.gob.es/Sede/ayuda/manuales-videos-folletos/manuales-practicos/irpf-2022"
-    links = get_all_links(starting_url, url_prefix)
+    links = crawl_aeat()
     print(f"Links: {len(links)}")
 
-    ingest_docs(links)
+    documents = load_links(links)
+    print(f"Num of downloaded documents: {len(documents)}")
+
+    split_documents = create_embeddings(documents)
+    print(f"Num of split documents: {len(split_documents)}")

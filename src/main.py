@@ -42,7 +42,7 @@ embedding = OpenAIEmbeddings(
 async def startup_event():
     logging.info("loading pickled documents")
     embeddings_file = f"{cfg.chroma.persist_directory}/chroma-embeddings.parquet"
-    pickle_docs_file = f"{cfg.chroma.persist_directory}/documents.pkl"
+    pickle_docs_file = f"{cfg.data_directory}/documents.pkl"
     if not Path(pickle_docs_file).exists():
         raise ValueError(
             f"{pickle_docs_file} does not exist, please run ingest.py first"
