@@ -21,6 +21,7 @@
             padding: 10px;
             margin: 10px;
             border-radius: 10px;
+            font-style: italic;
         }
 
         .client-message {
@@ -56,13 +57,49 @@
         .form-message {
             margin-top: 10px;
         }
+        .more-info {
+            color: rgb(69, 159, 242);
+        }
+        #messageText {
+            background-color: rgb(64, 65, 79);
+            margin-left: 10px;
+        }
+        #disclaimer2 {
+            color: hsla(0,0%,100%,.5);
+            margin: 10px;
+        }
     </style>
     <script>
+        const convertLinks = (input) => {
+            let text = input;
+            const linksFound = text.match(/(?:www|https?)[^\s]+/g);
+            const aLink = [];
+            if (linksFound != null) {
+                for (let i = 0; i < linksFound.length; i++) {
+                    let replace = linksFound[i];
+                    if (!(linksFound[i].match(/(http(s?)):\/\//))) {
+                        replace = 'http://' + linksFound[i]
+                    }
+                    let linkText = replace.split('/')[2];
+                    if (linkText.substring(0, 3) == 'www') {
+                        linkText = linkText.replace('www.', '')
+                    }
+                    aLink.push('<a href="' + replace + '" target="_blank" class="more-info">' + linkText + '</a>');
+                    text = text.split(linksFound[i]).map(item => {
+                        return aLink[i].includes('iframe') ? item.trim() : item
+                    }).join(aLink[i]);
+                }
+                return text;
+            } else {
+                return input;
+            }
+        }
         let endpoint = "ws://localhost:8000/chat";
         if (window.location.hostname.indexOf("rentagpt") > 0) {
             endpoint = "ws://rentagpt.com/chat";
         }
         let ws = new WebSocket(endpoint);
+        let text = "";
         // Receive message from server word by word. Display the words as they are received.
         ws.onmessage = function (event) {
             var messages = document.getElementById('messages');
@@ -74,7 +111,7 @@
                     var div = document.createElement('div');
                     div.className = 'server-message';
                     var p = document.createElement('p');
-                    // p.innerHTML = "🤖";
+                    text = ""
                     div.appendChild(p);
                     messages.appendChild(div);
                 } else if (data.type === "stream") {
@@ -82,14 +119,17 @@
                     header.innerHTML = "Chatbot está escribiendo...";
                     var p = messages.lastChild.lastChild;
                     if (data.message === "\n") {
-                        p.innerHTML += "<br>";
+                        text += "<br>";
                     } else {
-                        p.innerHTML += data.message;
+                        text += data.message;
                     }
+                    p.innerHTML = text
                 } else if (data.type === "info") {
                     var header = document.getElementById('header');
                     header.innerHTML = data.message;
                 } else if (data.type === "end") {
+                    var p = messages.lastChild.lastChild;
+                    p.innerHTML = convertLinks(text)
                     var header = document.getElementById('header');
                     header.innerHTML = "Haz tu pregunta";
                     var button = document.getElementById('send');
@@ -139,7 +179,6 @@
     <div class="card-body p-5">
         <h4 class="card-title text-center text-xl font-medium"> RENTA GPT</h4>
         <p class="card-text text-center text-sm" id="header"> Pregunta sobre la campaña de renta del 2022 </p>
-        <p class="card-text text-center text-sm" id="disclaimer"> Este sitio es meramente experimental. Para información detallada ir a la web de la AEAT</p>
         <hr class="border-gray-500 mb-5" style="margin-top: 20px;">
         <div id="messages" class="overflow-auto" style="max-height: 500px;">
         </div>
@@ -147,6 +186,8 @@
             <input type="text" class="form-control" placeholder="Escribe tu pregunta" id="messageText">
             <button id="send" type="submit" class="btn btn-primary">Enviar</button>
         </form>
+        <p class="text-xs" id="disclaimer2">RentaGPT puede producir información inacurada. Este sitio es experimental. Para información
+            detallada ir a la web de la AEAT</p>
     </div>
 </div>
 </body>
