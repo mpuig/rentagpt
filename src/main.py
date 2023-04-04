@@ -17,7 +17,8 @@ from langchain.vectorstores import VectorStore, Chroma
 
 from src.callback import StreamingLLMCallbackHandler
 from src.config import templates, cfg
-from src.prompts import PROMPT_TEMPLATE, YAML_DOCUMENT_TEMPLATE
+from src.prompts import (YAML_PROMPT_TEMPLATE, YAML_DOCUMENT_TEMPLATE,
+                         SOURCES_PROMPT_TEMPLATE, SOURCES_DOCUMENT_TEMPLATE)
 from src.schemas import ChatResponse
 
 app = FastAPI(debug=True, version="0.0.1", title="RentaGPT API")
@@ -82,16 +83,30 @@ def build_yaml_documents(query_results) -> str:
         {"text": doc.page_content, "URL": doc.metadata["source"]}
         for doc in query_results
     ]
-    yaml_products = [
+    yaml_documents = [
         YAML_DOCUMENT_TEMPLATE.format(yaml_document=yaml.safe_dump(info))
         for info in documents
     ]
-    return "\n".join(yaml_products)
+    return "\n".join(yaml_documents)
+
+
+def build_sources_documents(query_results) -> str:
+    return "\n".join([
+        SOURCES_DOCUMENT_TEMPLATE.format(
+            idx=idx,
+            text=doc.page_content,
+            source=doc.metadata["source"]
+        ) for idx, doc in enumerate(query_results)
+    ])
 
 
 def get_chain(stream_handler):
     manager = AsyncCallbackManager([])
     stream_manager = AsyncCallbackManager([stream_handler])
+    if cfg.prompt_template == 'YAML':
+        template = YAML_PROMPT_TEMPLATE
+    else:
+        template = SOURCES_PROMPT_TEMPLATE
     streaming_llm = OpenAI(
         openai_api_key=cfg.providers.openai.api_key,
         streaming=True,
@@ -101,7 +116,8 @@ def get_chain(stream_handler):
         max_tokens=1000,
     )
     prompt = PromptTemplate(
-        template=PROMPT_TEMPLATE, input_variables=["documents", "question"]
+        template=template,
+        input_variables=["documents", "question"]
     )
     return LLMChain(
         llm=streaming_llm,
@@ -133,9 +149,12 @@ async def websocket_endpoint(websocket: WebSocket):
                 query=question,
                 k=5,
             )
-            yaml_documents = build_yaml_documents(query_results)
+            if cfg.prompt_template == 'YAML':
+                documents = build_yaml_documents(query_results)
+            else:
+                documents = build_sources_documents(query_results)
             result = await qa_chain.acall(
-                {"documents": yaml_documents, "question": question}
+                {"documents": documents, "question": question}
             )
             chat_history.append((question, result["text"]))
 

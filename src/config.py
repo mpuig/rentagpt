@@ -28,9 +28,10 @@ class ChromaConfig(BaseModel):
 
 class Config(BaseSettings):
     api: APIConfig
-    providers: ProvidersConfig
     chroma: ChromaConfig
     data_directory: str = os.path.join(data_path, "data")
+    prompt_template: str = 'YAML'
+    providers: ProvidersConfig
 
     class Config:
         env_file = "../.env"
