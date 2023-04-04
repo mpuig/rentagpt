@@ -7,7 +7,7 @@ primary_region = "mad"
   builder = "paketobuildpacks/builder:base"
 
 [env]
-  PORT = "8080"
+  LOG_LEVEL = "debug"
 
 [[services]]
   internal_port = 8080
