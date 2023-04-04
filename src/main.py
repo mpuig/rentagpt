@@ -25,9 +25,15 @@ app = FastAPI(debug=True, version="0.0.1", title="RentaGPT API")
 
 docsearch: Optional[VectorStore] = None
 
+origins = [
+    "https://rentagpt.fly.dev",
+    "https://rentagpt.com",
+    "http://localhost:8000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
