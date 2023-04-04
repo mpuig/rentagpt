@@ -22,3 +22,4 @@ YAML_DOCUMENT_TEMPLATE = """
 ```yaml
 {yaml_document}
 ```"""
+

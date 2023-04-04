@@ -2,6 +2,12 @@ include .env
 
 .PHONY: start
 
+setup:
+	python3 -m pip install --upgrade pip
+	python3 -m venv .venv
+	source .venv/bin/activate
+	pip install -r requirements.txt
+
 start:
 	uvicorn src.main:app --reload --host 0.0.0.0 --port 8000 --env-file .env
 
