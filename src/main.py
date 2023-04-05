@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 import pickle
@@ -106,7 +107,7 @@ def build_sources_documents(query_results) -> str:
     ])
 
 
-def get_chain(stream_handler):
+def get_chain(stream_handler, api_key):
     manager = AsyncCallbackManager([])
     stream_manager = AsyncCallbackManager([stream_handler])
     if cfg.prompt_template == 'YAML':
@@ -114,12 +115,13 @@ def get_chain(stream_handler):
     else:
         template = SOURCES_PROMPT_TEMPLATE
     streaming_llm = OpenAI(
-        openai_api_key=cfg.providers.openai.api_key,
+        # openai_api_key=cfg.providers.openai.api_key,
+        openai_api_key=api_key,
         streaming=True,
         callback_manager=stream_manager,
         verbose=True,
         temperature=0.0,
-        max_tokens=1000,
+        max_tokens=500,
     )
     prompt = PromptTemplate(
         template=template,
@@ -137,14 +139,15 @@ async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
 
     stream_handler = StreamingLLMCallbackHandler(websocket)
-    qa_chain = get_chain(stream_handler)
 
     chat_history = []
     while True:
         try:
             # Receive and send back the client message
             question = await websocket.receive_text()
-            resp = ChatResponse(sender="you", message=question, type="stream")
+            data = json.loads(question)
+
+            resp = ChatResponse(sender="you", message=data["query"], type="stream")
             await websocket.send_json(resp.dict())
 
             # Construct a response
@@ -159,12 +162,60 @@ async def websocket_endpoint(websocket: WebSocket):
                 documents = build_yaml_documents(query_results)
             else:
                 documents = build_sources_documents(query_results)
+
+            qa_chain = get_chain(stream_handler, data["apiKey"])
             result = await qa_chain.acall(
                 {"documents": documents, "question": question}
             )
             chat_history.append((question, result["text"]))
 
             end_resp = ChatResponse(sender="bot", message="", type="end")
+            await websocket.send_json(end_resp.dict())
+        except WebSocketDisconnect:
+            logging.info("websocket disconnect")
+            break
+        except Exception as e:
+            logging.error(e)
+            resp = ChatResponse(
+                sender="bot",
+                message="Sorry, something went wrong. Try again.",
+                type="error",
+            )
+            await websocket.send_json(resp.dict())
+
+
+@app.websocket("/chatfake")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        try:
+            # Receive and send back the client message
+            question = await websocket.receive_text()
+            data = json.loads(question)
+            resp = ChatResponse(sender="you", message=data["query"], type="stream")
+            await websocket.send_json(resp.dict())
+
+            # Send links
+            message = {"sources": [
+                {"text": "1", "url": "http://link1.com/page1/rtx"},
+                {"text": "2", "url": "http://link2.com"},
+                {"text": "3", "url": "http://link3.com"},
+            ]}
+            links = ChatResponse(sender="bot", message=json.dumps(message), type="info")
+            await websocket.send_json(links.dict())
+
+            # Construct a response
+            start_resp = ChatResponse(sender="bot", message="", type="start")
+            await websocket.send_json(start_resp.dict())
+
+            import time
+            message = "lorem ipsum [2]. Dolor sit amet [1]."
+            for token in message.split(" "):
+                stream_resp = ChatResponse(sender="bot", message=f"{token} ", type="stream")
+                await websocket.send_json(stream_resp.dict())
+                time.sleep(1)
+
+            end_resp = ChatResponse(sender="bot", message=message, type="end")
             await websocket.send_json(end_resp.dict())
         except WebSocketDisconnect:
             logging.info("websocket disconnect")
