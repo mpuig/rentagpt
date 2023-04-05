@@ -40,12 +40,7 @@ Pregunta del usuario:
 -----------
 Se original, conciso, acurado y de ayuda. Cita los documentos como [1] o [2] o [3]
 después de cada frase (no solo al final) para dar contexto a las respuestas
-(Ex: Correcto: [1], Correcto: [2][3], Incorrecto: [1, 2]).
-
-Añade una lista con los enlaces utilizados al final, en un parrafo nuevo cada uno.
-Por ejemplo:
-- [1] https://link1.com
-- [2] https://link2.com
+(Ex: Documento de ejemplo 1: [1], otro documento: [2][3], y finalmente otro: [1][2]).
 
 Si no hay suficiente información, pregunta por más detalles y no añadas enlace.
 """

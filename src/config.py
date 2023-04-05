@@ -30,7 +30,7 @@ class Config(BaseSettings):
     api: APIConfig
     chroma: ChromaConfig
     data_directory: str = os.path.join(data_path, "data")
-    prompt_template: str = 'YAML'
+    prompt_template: str = 'SOURCES'
     providers: ProvidersConfig
 
     class Config:
