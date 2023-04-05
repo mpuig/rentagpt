@@ -11,7 +11,7 @@ jobs:
       - uses: actions/checkout@v3
       - uses: actions/setup-node@v3
       - working-directory: ./frontend
-        run: npm install && npm run build && cp dist/index.html ../src/templates
+        run: npm install && npm run build && cp dist/index.html ../src/templates && rm -rf node_modules
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - run: flyctl deploy --remote-only
         env:

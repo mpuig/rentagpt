@@ -1,6 +1,7 @@
-# fly.toml file generated for rentagpt on 2023-04-04T12:00:23+02:00
+# fly.toml file generated for rentagpt on 2023-04-05T11:14:30+02:00
 
 app = "rentagpt"
+kill_timeout = 0
 primary_region = "mad"
 
 [build]
@@ -8,15 +9,16 @@ primary_region = "mad"
 
 [env]
   LOG_LEVEL = "debug"
+  PORT = "8080"
 
 [[services]]
-  internal_port = 8080
   protocol = "tcp"
+  internal_port = 8080
 
   [[services.ports]]
+    port = 80
     handlers = ["http"]
-    port = "80"
 
   [[services.ports]]
+    port = 443
     handlers = ["tls", "http"]
-    port = "443"
