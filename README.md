@@ -14,6 +14,27 @@ possible to run semantic searches through it.
 Given a query, RentaGPT fetches relevant information from the database, and then it prompts OpenAI GPT-3 API to generate
 an answer from the more relevant documents found in the initial step.
 
+
+## How to deploy to fly.io
+
+Create an account to [fly.io](https://fly.io)
+
+First configure the app:
+```
+fly launch
+```
+
+Deploy the app to your account:
+```
+flyctl deploy --remote-only
+```
+
+Setup some server parameters to make it work properly:
+```
+flyctl ips allocate-v4
+flyctl scale memory 1024
+```
+
 ## Requirements
 
 Get OpenAI API key [here](https://openai.com/api/).
