@@ -1,11 +1,9 @@
 import os.path
 
-from fastapi.templating import Jinja2Templates
 from pydantic import BaseSettings, BaseModel, Field
 
-src_path = os.path.dirname(os.path.realpath(__file__))
-data_path = os.path.join(src_path, "..")
-templates = Jinja2Templates(directory=os.path.join(src_path, "templates"))
+SRC_PATH = os.path.dirname(os.path.realpath(__file__))
+DATA_PATH = os.path.join(SRC_PATH, "..", "data")
 
 
 class APIConfig(BaseModel):
@@ -22,14 +20,14 @@ class ProvidersConfig(BaseModel):
 
 
 class ChromaConfig(BaseModel):
-    persist_directory: str = os.path.join(data_path, "data", "chroma")
+    persist_directory: str = os.path.join(DATA_PATH, "chroma")
     collection_name: str = "renta22"
 
 
 class Config(BaseSettings):
     api: APIConfig
     chroma: ChromaConfig
-    data_directory: str = os.path.join(data_path, "data")
+    data_directory: str = DATA_PATH
     prompt_template: str = 'SOURCES'
     providers: ProvidersConfig
 

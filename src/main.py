@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import os.path
 import pickle
 from pathlib import Path
 from typing import Optional
@@ -15,14 +16,20 @@ from langchain.callbacks.base import AsyncCallbackManager
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import VectorStore, Chroma
+from starlette.responses import FileResponse
+from starlette.staticfiles import StaticFiles
+from starlette.templating import Jinja2Templates
 
 from src.callback import StreamingLLMCallbackHandler
-from src.config import templates, cfg
+from src.config import cfg, SRC_PATH
 from src.prompts import (YAML_PROMPT_TEMPLATE, YAML_DOCUMENT_TEMPLATE,
                          SOURCES_PROMPT_TEMPLATE, SOURCES_DOCUMENT_TEMPLATE)
 from src.schemas import ChatResponse
 
-app = FastAPI(debug=True, version="0.0.1", title="RentaGPT API")
+app = FastAPI(debug=True, version="0.0.1", title="Renta GPT API")
+
+app.mount("/public", StaticFiles(directory=os.path.join(SRC_PATH, "public")), name="public")
+templates = Jinja2Templates(directory=os.path.join(SRC_PATH, "templates"))
 
 docsearch: Optional[VectorStore] = None
 
@@ -30,6 +37,7 @@ origins = [
     "https://rentagpt.fly.dev",
     "https://rentagpt.com",
     "http://localhost:8000",
+    "http://localhost:5173",
 ]
 
 app.add_middleware(
@@ -85,10 +93,17 @@ async def get(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
 
+@app.get('/favicon.ico', include_in_schema=False)
+async def favicon():
+    file_name = "favicon.ico"
+    file_path = os.path.join(SRC_PATH, "public", file_name)
+    return FileResponse(path=file_path, headers={"Content-Disposition": "attachment; filename=" + file_name})
+
+
 def build_yaml_documents(query_results) -> str:
     documents = [
-        {"text": doc.page_content, "URL": doc.metadata["source"]}
-        for doc in query_results
+        {"id": idx, "text": doc.page_content, "URL": doc.metadata["source"]}
+        for idx, doc in enumerate(query_results)
     ]
     yaml_documents = [
         YAML_DOCUMENT_TEMPLATE.format(yaml_document=yaml.safe_dump(info))
@@ -100,7 +115,7 @@ def build_yaml_documents(query_results) -> str:
 def build_sources_documents(query_results) -> str:
     return "\n".join([
         SOURCES_DOCUMENT_TEMPLATE.format(
-            idx=idx,
+            idx=idx+1,
             text=doc.page_content,
             source=doc.metadata["source"]
         ) for idx, doc in enumerate(query_results)
@@ -156,17 +171,28 @@ async def websocket_endpoint(websocket: WebSocket):
 
             query_results = docsearch.max_marginal_relevance_search(
                 query=question,
-                k=5,
+                k=4,
             )
+            message = {
+                "sources": [
+                    {"text": f"{idx+1}", "url": doc.metadata["source"]}
+                    for idx, doc in enumerate(query_results)
+                ]
+            }
+            links = ChatResponse(sender="bot", message=json.dumps(message), type="info")
+            await websocket.send_json(links.dict())
+
             if cfg.prompt_template == 'YAML':
                 documents = build_yaml_documents(query_results)
             else:
                 documents = build_sources_documents(query_results)
 
+            print(documents)
             qa_chain = get_chain(stream_handler, data["apiKey"])
             result = await qa_chain.acall(
                 {"documents": documents, "question": question}
             )
+
             chat_history.append((question, result["text"]))
 
             end_resp = ChatResponse(sender="bot", message="", type="end")

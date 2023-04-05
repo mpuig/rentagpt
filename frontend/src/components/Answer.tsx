@@ -50,6 +50,15 @@ export const Answer: FC<AnswerProps> = ({ query, sources, answer, done, onReset 
             <IconReload size={18} />
             <div className="ml-2">Hacer otra pregunta</div>
           </button>
+            <p className="text-xs">
+                RentaGPT usa Inteligencia Artificial (GPT-3) para responder cualquier pregunta relacionada con el
+                <a href="https://sede.agenciatributaria.gob.es/Sede/Ayuda/22Manual/100.html" className="more-info"
+                   target="_blank">Manual Práctico de Renta 2022</a>.
+
+            </p>
+            <p className="text-xs">
+                Es un proyecto experimental y puede producir información inexacta.
+            </p>
         </>
       )}
     </div>
@@ -61,7 +70,7 @@ const replaceSourcesWithLinks = (answer: string, sourceLinks: Source[]) => {
     if (/\[[0-9]+\]/.test(part)) {
       const link = sourceLinks[parseInt(part.replace(/[\[\]]/g, "")) - 1];
 
-      return (
+      return link && (
         <a
           key={index}
           className="hover:cursor-pointer text-blue-500"
