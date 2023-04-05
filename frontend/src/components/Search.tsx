@@ -11,9 +11,9 @@ interface SearchProps {
 
 let endpoint = "ws://localhost:8000/chat";
 if (window.location.hostname.indexOf("rentagpt.com") === 0) {
-    endpoint = "ws://rentagpt.com/chat";
+    endpoint = "wss://rentagpt.com/chat";
 } else if (window.location.hostname.indexOf("rentagpt.fly.dev") === 0) {
-    endpoint = "ws://rentagpt.fly.dev/chat";
+    endpoint = "wss://rentagpt.fly.dev/chat";
 }
 
 export const Search: FC<SearchProps> = ({onSearch, onAnswerUpdate, onSources, onDone}) => {
