@@ -10,8 +10,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: build frontend
-        uses: actions/setup-node@v3
-        working-directory: ./frontend
+      - uses: actions/setup-node@v3
+      - working-directory: ./frontend
         run: |
           npm install
           npm run build
