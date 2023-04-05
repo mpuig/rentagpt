@@ -35,6 +35,13 @@ flyctl ips allocate-v4
 flyctl scale memory 1024
 ```
 
+```
+fly secrets set API__PORT=8080
+fly secrets set API__HOST=0.0.0.0
+fly secrets set CHROMA__COLLECTION_NAME="renta22"
+PROVIDERS__OPENAI__API_KEY="sk-YOUR_OPENAI_API_KEY"
+```
+
 ## Requirements
 
 Get OpenAI API key [here](https://openai.com/api/).

@@ -9,7 +9,7 @@ interface SearchProps {
     onDone: (done: boolean) => void;
 }
 
-let endpoint = "ws://localhost:8000/chatfake";
+let endpoint = "ws://localhost:8000/chat";
 if (window.location.hostname.indexOf("rentagpt.com") === 1) {
     endpoint = "ws://rentagpt.com/chat";
 } else if (window.location.hostname.indexOf("rentagpt.fly.dev") === 1) {
