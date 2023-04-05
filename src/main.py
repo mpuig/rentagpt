@@ -187,7 +187,6 @@ async def websocket_endpoint(websocket: WebSocket):
             else:
                 documents = build_sources_documents(query_results)
 
-            print(documents)
             qa_chain = get_chain(stream_handler, data["apiKey"])
             result = await qa_chain.acall(
                 {"documents": documents, "question": question}
