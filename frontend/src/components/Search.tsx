@@ -10,9 +10,9 @@ interface SearchProps {
 }
 
 let endpoint = "ws://localhost:8000/chat";
-if (window.location.hostname.indexOf("rentagpt.com") === 1) {
+if (window.location.hostname.indexOf("rentagpt.com") === 0) {
     endpoint = "ws://rentagpt.com/chat";
-} else if (window.location.hostname.indexOf("rentagpt.fly.dev") === 1) {
+} else if (window.location.hostname.indexOf("rentagpt.fly.dev") === 0) {
     endpoint = "ws://rentagpt.fly.dev/chat";
 }
 
@@ -116,7 +116,7 @@ export const Search: FC<SearchProps> = ({onSearch, onAnswerUpdate, onSources, on
                                 ref={inputRef}
                                 className="h-12 w-full rounded-full border border-zinc-600 bg-[#2A2A31] pr-12 pl-11 focus:border-zinc-800 focus:bg-[#18181C] focus:outline-none focus:ring-2 focus:ring-zinc-800 sm:h-16 sm:py-2 sm:pr-16 sm:pl-16 sm:text-lg"
                                 type="text"
-                                placeholder="Pregunta qualquier cosa sobre la Renta 2022..."
+                                placeholder="Pregunta cualquier duda relacionada con la Renta 2022..."
                                 value={query}
                                 onChange={(e) => setQuery(e.target.value)}
                                 onKeyDown={handleKeyDown}
