@@ -9,6 +9,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+      - run: cd frontend
+      - run: npm ci
+      - run: npm run build
+      - run: cp dist/index.html ../src/templates
+      - run: cd ..
       - uses: superfly/flyctl-actions/setup-flyctl@master
       - run: flyctl deploy --remote-only
         env:
