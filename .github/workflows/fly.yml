@@ -9,13 +9,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
-      - run: cd frontend
-      - run: npm install
-      - run: npm run build
-      - run: cp dist/index.html ../src/templates
-      - run: cd ..
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-      - run: flyctl deploy --remote-only
+      - name: build frontend
+        uses: actions/setup-node@v3
+        run: |
+          cd frontend
+          npm install
+          npm run build
+          cp dist/index.html ../src/templates
+      - name: setup fly
+        uses: superfly/flyctl-actions/setup-flyctl@master
+      - name: deploy to fly
+        run: flyctl deploy --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
