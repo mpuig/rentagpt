@@ -2,8 +2,6 @@ import json
 import logging
 import os
 import os.path
-import pickle
-from pathlib import Path
 from typing import Optional
 
 import yaml
@@ -14,7 +12,6 @@ from langchain import OpenAI, LLMChain
 from langchain import PromptTemplate
 from langchain.callbacks.base import AsyncCallbackManager
 from langchain.embeddings import OpenAIEmbeddings
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import VectorStore, Chroma
 from starlette.responses import FileResponse
 from starlette.staticfiles import StaticFiles
@@ -48,44 +45,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-embedding = OpenAIEmbeddings(
-    openai_api_key=cfg.providers.openai.api_key,
-    model="text-embedding-ada-002",
-)
-
 
 @app.on_event("startup")
 async def startup_event():
     logging.info("loading pickled documents")
     embeddings_file = f"{cfg.chroma.persist_directory}/chroma-embeddings.parquet"
-    pickle_docs_file = f"{cfg.data_directory}/documents.pkl"
-    if not Path(pickle_docs_file).exists():
-        raise ValueError(
-            f"{pickle_docs_file} does not exist, please run ingest.py first"
-        )
-    with open(pickle_docs_file, "rb") as f:
-        documents = pickle.load(f)
 
     if not os.path.exists(embeddings_file):
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=50,
-            length_function=len,
+        raise ValueError(
+            f"{embeddings_file} does not exist, please run ingest.py first"
         )
-        client = Chroma.from_documents(
-            documents=text_splitter.split_documents(documents),
-            embedding=embedding,
-            collection_name=cfg.chroma.collection_name,
-            persist_directory=cfg.chroma.persist_directory,
-        )
-        client.persist()
-
-    global docsearch
-    docsearch = Chroma(
-        embedding_function=embedding,
-        collection_name=cfg.chroma.collection_name,
-        persist_directory=cfg.chroma.persist_directory,
-    )
 
 
 @app.get("/")
@@ -115,7 +84,7 @@ def build_yaml_documents(query_results) -> str:
 def build_sources_documents(query_results) -> str:
     return "\n".join([
         SOURCES_DOCUMENT_TEMPLATE.format(
-            idx=idx+1,
+            idx=idx + 1,
             text=doc.page_content,
             source=doc.metadata["source"]
         ) for idx, doc in enumerate(query_results)
@@ -130,7 +99,6 @@ def get_chain(stream_handler, api_key):
     else:
         template = SOURCES_PROMPT_TEMPLATE
     streaming_llm = OpenAI(
-        # openai_api_key=cfg.providers.openai.api_key,
         openai_api_key=api_key,
         streaming=True,
         callback_manager=stream_manager,
@@ -155,58 +123,67 @@ async def websocket_endpoint(websocket: WebSocket):
 
     stream_handler = StreamingLLMCallbackHandler(websocket)
 
-    chat_history = []
-    while True:
-        try:
-            # Receive and send back the client message
-            question = await websocket.receive_text()
-            data = json.loads(question)
+    try:
+        # Receive and send back the client message
+        question = await websocket.receive_text()
+        data = json.loads(question)
 
-            resp = ChatResponse(sender="you", message=data["query"], type="stream")
-            await websocket.send_json(resp.dict())
-
-            # Construct a response
-            start_resp = ChatResponse(sender="bot", message="", type="start")
-            await websocket.send_json(start_resp.dict())
-
-            query_results = docsearch.max_marginal_relevance_search(
-                query=question,
-                k=4,
+        api_key = data["apiKey"]
+        global docsearch
+        if docsearch is None and api_key:
+            embedding = OpenAIEmbeddings(
+                openai_api_key=api_key,
+                model="text-embedding-ada-002",
             )
-            message = {
-                "sources": [
-                    {"text": f"{idx+1}", "url": doc.metadata["source"]}
-                    for idx, doc in enumerate(query_results)
-                ]
-            }
-            links = ChatResponse(sender="bot", message=json.dumps(message), type="info")
-            await websocket.send_json(links.dict())
-
-            if cfg.prompt_template == 'YAML':
-                documents = build_yaml_documents(query_results)
-            else:
-                documents = build_sources_documents(query_results)
-
-            qa_chain = get_chain(stream_handler, data["apiKey"])
-            result = await qa_chain.acall(
-                {"documents": documents, "question": question}
+            docsearch = Chroma(
+                embedding_function=embedding,
+                collection_name=cfg.chroma.collection_name,
+                persist_directory=cfg.chroma.persist_directory,
             )
 
-            chat_history.append((question, result["text"]))
+        resp = ChatResponse(sender="you", message=data["query"], type="stream")
+        await websocket.send_json(resp.dict())
 
-            end_resp = ChatResponse(sender="bot", message="", type="end")
-            await websocket.send_json(end_resp.dict())
-        except WebSocketDisconnect:
-            logging.info("websocket disconnect")
-            break
-        except Exception as e:
-            logging.error(e)
-            resp = ChatResponse(
-                sender="bot",
-                message="Sorry, something went wrong. Try again.",
-                type="error",
-            )
-            await websocket.send_json(resp.dict())
+        # Construct a response
+        start_resp = ChatResponse(sender="bot", message="", type="start")
+        await websocket.send_json(start_resp.dict())
+
+        query_results = docsearch.max_marginal_relevance_search(
+            query=question,
+            k=4,
+        )
+        message = {
+            "sources": [
+                {"text": f"{idx + 1}", "url": doc.metadata["source"]}
+                for idx, doc in enumerate(query_results)
+            ]
+        }
+        links = ChatResponse(sender="bot", message=json.dumps(message), type="info")
+        await websocket.send_json(links.dict())
+
+        if cfg.prompt_template == 'YAML':
+            documents = build_yaml_documents(query_results)
+        else:
+            documents = build_sources_documents(query_results)
+
+        qa_chain = get_chain(stream_handler, api_key)
+        result = await qa_chain.acall(
+            {"documents": documents, "question": question}
+        )
+
+        end_resp = ChatResponse(sender="bot", message="", type="end")
+        await websocket.send_json(end_resp.dict())
+    except WebSocketDisconnect:
+        logging.info("websocket disconnect")
+        return
+    except Exception as e:
+        logging.error(e)
+        resp = ChatResponse(
+            sender="bot",
+            message="Sorry, something went wrong. Try again.",
+            type="error",
+        )
+        await websocket.send_json(resp.dict())
 
 
 @app.websocket("/chatfake")
