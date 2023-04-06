@@ -4,7 +4,6 @@ import os
 import os.path
 from typing import Optional
 
-import yaml
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -140,52 +139,6 @@ async def websocket_endpoint(websocket: WebSocket):
             type="error",
         )
         await websocket.send_json(resp.dict())
-
-
-@app.websocket("/chatfake")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    while True:
-        try:
-            # Receive and send back the client message
-            question = await websocket.receive_text()
-            data = json.loads(question)
-            resp = ChatResponse(sender="you", message=data["query"], type="stream")
-            await websocket.send_json(resp.dict())
-
-            # Send links
-            message = {"sources": [
-                {"text": "1", "url": "http://link1.com/page1/rtx"},
-                {"text": "2", "url": "http://link2.com"},
-                {"text": "3", "url": "http://link3.com"},
-            ]}
-            links = ChatResponse(sender="bot", message=json.dumps(message), type="info")
-            await websocket.send_json(links.dict())
-
-            # Construct a response
-            start_resp = ChatResponse(sender="bot", message="", type="start")
-            await websocket.send_json(start_resp.dict())
-
-            import time
-            message = "lorem ipsum [2]. Dolor sit amet [1]."
-            for token in message.split(" "):
-                stream_resp = ChatResponse(sender="bot", message=f"{token} ", type="stream")
-                await websocket.send_json(stream_resp.dict())
-                time.sleep(1)
-
-            end_resp = ChatResponse(sender="bot", message=message, type="end")
-            await websocket.send_json(end_resp.dict())
-        except WebSocketDisconnect:
-            logging.info("websocket disconnect")
-            break
-        except Exception as e:
-            logging.error(e)
-            resp = ChatResponse(
-                sender="bot",
-                message="Sorry, something went wrong. Try again.",
-                type="error",
-            )
-            await websocket.send_json(resp.dict())
 
 
 if __name__ == "__main__":
