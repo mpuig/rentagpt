@@ -11,16 +11,12 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.websockets import WebSocket, WebSocketDisconnect
-from langchain import OpenAI, LLMChain
-from langchain import PromptTemplate
-from langchain.callbacks.base import AsyncCallbackManager
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import VectorStore, Chroma
 
 from src.callback import StreamingLLMCallbackHandler
+from src.chains import build_yaml_documents, get_streaming_chain, get_filter_documents_chain
 from src.config import cfg, SRC_PATH
-from src.prompts import (YAML_PROMPT_TEMPLATE, YAML_DOCUMENT_TEMPLATE,
-                         SOURCES_PROMPT_TEMPLATE, SOURCES_DOCUMENT_TEMPLATE)
 from src.schemas import ChatResponse
 
 app = FastAPI(debug=True, version="0.0.1", title="Renta GPT API")
@@ -69,67 +65,19 @@ async def favicon():
     return FileResponse(path=file_path, headers={"Content-Disposition": "attachment; filename=" + file_name})
 
 
-def build_yaml_documents(query_results) -> str:
-    documents = [
-        {"id": idx, "text": doc.page_content, "URL": doc.metadata["source"]}
-        for idx, doc in enumerate(query_results)
-    ]
-    yaml_documents = [
-        YAML_DOCUMENT_TEMPLATE.format(yaml_document=yaml.safe_dump(info))
-        for info in documents
-    ]
-    return "\n".join(yaml_documents)
-
-
-def build_sources_documents(query_results) -> str:
-    return "\n".join([
-        SOURCES_DOCUMENT_TEMPLATE.format(
-            idx=idx + 1,
-            text=doc.page_content,
-            source=doc.metadata["source"]
-        ) for idx, doc in enumerate(query_results)
-    ])
-
-
-def get_chain(stream_handler, api_key):
-    manager = AsyncCallbackManager([])
-    stream_manager = AsyncCallbackManager([stream_handler])
-    if cfg.prompt_template == 'YAML':
-        template = YAML_PROMPT_TEMPLATE
-    else:
-        template = SOURCES_PROMPT_TEMPLATE
-    streaming_llm = OpenAI(
-        openai_api_key=api_key,
-        streaming=True,
-        callback_manager=stream_manager,
-        verbose=True,
-        temperature=0.0,
-        max_tokens=500,
-    )
-    prompt = PromptTemplate(
-        template=template,
-        input_variables=["documents", "question"]
-    )
-    return LLMChain(
-        llm=streaming_llm,
-        prompt=prompt,
-        callback_manager=manager,
-    )
-
-
 @app.websocket("/chat")
 async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
+    global docsearch
 
+    await websocket.accept()
     stream_handler = StreamingLLMCallbackHandler(websocket)
 
     try:
         # Receive and send back the client message
         question = await websocket.receive_text()
         data = json.loads(question)
-
         api_key = data["apiKey"]
-        global docsearch
+
         if docsearch is None and api_key:
             embedding = OpenAIEmbeddings(
                 openai_api_key=api_key,
@@ -144,7 +92,6 @@ async def websocket_endpoint(websocket: WebSocket):
         resp = ChatResponse(sender="you", message=data["query"], type="stream")
         await websocket.send_json(resp.dict())
 
-        # Construct a response
         start_resp = ChatResponse(sender="bot", message="", type="start")
         await websocket.send_json(start_resp.dict())
 
@@ -152,24 +99,23 @@ async def websocket_endpoint(websocket: WebSocket):
             query=question,
             k=4,
         )
-        message = {
-            "sources": [
-                {"text": f"{idx + 1}", "url": doc.metadata["source"]}
-                for idx, doc in enumerate(query_results)
-            ]
-        }
-        links = ChatResponse(sender="bot", message=json.dumps(message), type="info")
+
+        filter_documents_chain = get_filter_documents_chain(api_key)
+        documents = build_yaml_documents(query_results)
+        result = await filter_documents_chain.acall({
+            "question": question,
+            "documents": documents,
+        })
+        result_text = result['text'].replace("```json", "").replace("```", "")
+        result_json = {"sources": json.loads(result_text)}
+        links = ChatResponse(sender="bot", message=json.dumps(result_json), type="info")
         await websocket.send_json(links.dict())
 
-        if cfg.prompt_template == 'YAML':
-            documents = build_yaml_documents(query_results)
-        else:
-            documents = build_sources_documents(query_results)
-
-        qa_chain = get_chain(stream_handler, api_key)
-        result = await qa_chain.acall(
-            {"documents": documents, "question": question}
-        )
+        streaming_chain = get_streaming_chain(stream_handler, api_key)
+        result = await streaming_chain.acall({
+            "question": question,
+            "documents": result['text'],
+        })
 
         end_resp = ChatResponse(sender="bot", message="", type="end")
         await websocket.send_json(end_resp.dict())

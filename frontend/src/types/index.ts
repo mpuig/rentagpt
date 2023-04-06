@@ -1,4 +1,4 @@
 export type Source = {
-  url: string;
-  text: string;
+  source: string;
+  id: string;
 };

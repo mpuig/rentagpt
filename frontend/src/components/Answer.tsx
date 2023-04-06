@@ -35,9 +35,9 @@ export const Answer: FC<AnswerProps> = ({ query, sources, answer, done, onReset 
                   className="hover:cursor-pointer hover:underline"
                   target="_blank"
                   rel="noopener noreferrer"
-                  href={source.url}
+                  href={source.source}
                 >
-                  {source.url.split("//")[1].split("/")[0].replace("www.", "")}
+                  {source.source.split("//")[1].split("/")[0].replace("www.", "")}
                 </a>
               </div>
             ))}
@@ -74,7 +74,7 @@ const replaceSourcesWithLinks = (answer: string, sourceLinks: Source[]) => {
         <a
           key={index}
           className="hover:cursor-pointer text-blue-500"
-          href={link.url}
+          href={link.source}
           target="_blank"
           rel="noopener noreferrer"
         >
