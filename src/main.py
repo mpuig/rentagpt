@@ -18,7 +18,7 @@ from src.chains import build_yaml_documents, get_streaming_chain, get_filter_doc
 from src.config import cfg, SRC_PATH
 from src.schemas import ChatResponse
 
-app = FastAPI(debug=True, version="0.0.1", title="Renta GPT API")
+app = FastAPI(debug=True, version="0.9.0", title="Renta GPT API")
 
 app.mount("/public", StaticFiles(directory=os.path.join(SRC_PATH, "public")), name="public")
 templates = Jinja2Templates(directory=os.path.join(SRC_PATH, "templates"))
@@ -59,9 +59,7 @@ async def get(request: Request):
 
 @app.get('/favicon.ico', include_in_schema=False)
 async def favicon():
-    file_name = "favicon.ico"
-    file_path = os.path.join(SRC_PATH, "public", file_name)
-    return FileResponse(path=file_path, headers={"Content-Disposition": "attachment; filename=" + file_name})
+    return FileResponse(path=os.path.join(SRC_PATH, "public", "favicon.ico"))
 
 
 @app.websocket("/chat")
