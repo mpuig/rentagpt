@@ -5,6 +5,10 @@ related to the Spanish Taxes (Renta 2022).
 
 If you have any questions, feel free to reach out to me on [Twitter](https://twitter.com/mpuig).
 
+[RentaGPT.com](https://rentagpt.com)
+
+[Blog Post](https://medium.com/@mpuig/developing-rentagpt-a-search-bot-for-taxes-using-langchain-chroma-and-openai-gpt-c9c56c508a62)
+
 ## How it works
 
 RentaGPT has a vector database that stores information about the context.
