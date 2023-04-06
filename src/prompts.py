@@ -7,7 +7,7 @@ Devuelve todos los relacionados con la siguiente pregunta:
 
 {question}
 
-Responde solamente usando JSON.
+Responde solamente usando formato JSON estricto.
 La respuesta tiene que ester en formato JSON, con los siguientes campos: id, source.
 """
 
