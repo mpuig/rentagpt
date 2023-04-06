@@ -1,9 +1,9 @@
-"""Schemas for the chat app."""
+"""Schemas for the app."""
 from pydantic import BaseModel, validator
 
 
-class ChatResponse(BaseModel):
-    """Chat response schema."""
+class BotResponse(BaseModel):
+    """Bot response schema."""
 
     sender: str
     message: str

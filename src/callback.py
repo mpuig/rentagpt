@@ -3,7 +3,7 @@ from typing import Any, Dict, List
 
 from langchain.callbacks.base import AsyncCallbackHandler
 
-from src.schemas import ChatResponse
+from src.schemas import BotResponse
 
 
 class StreamingLLMCallbackHandler(AsyncCallbackHandler):
@@ -13,7 +13,7 @@ class StreamingLLMCallbackHandler(AsyncCallbackHandler):
         self.websocket = websocket
 
     async def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
-        resp = ChatResponse(sender="bot", message=token, type="stream")
+        resp = BotResponse(sender="bot", message=token, type="stream")
         await self.websocket.send_json(resp.dict())
 
 
@@ -27,7 +27,7 @@ class QuestionGenCallbackHandler(AsyncCallbackHandler):
         self, serialized: Dict[str, Any], prompts: List[str], **kwargs: Any
     ) -> None:
         """Run when LLM starts running."""
-        resp = ChatResponse(
+        resp = BotResponse(
             sender="bot", message="Synthesizing question...", type="info"
         )
         await self.websocket.send_json(resp.dict())

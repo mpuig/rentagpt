@@ -52,8 +52,8 @@ export const Answer: FC<AnswerProps> = ({ query, sources, answer, done, onReset 
           </button>
             <p className="text-xs">
                 RentaGPT usa Inteligencia Artificial (GPT-3) para responder cualquier pregunta relacionada con el
-                <a href="https://sede.agenciatributaria.gob.es/Sede/Ayuda/22Manual/100.html" className="more-info"
-                   target="_blank">Manual Práctico de Renta 2022</a>.
+                <a href="https://sede.agenciatributaria.gob.es/Sede/Ayuda/22Manual/100.html" className="text-blue-400"
+                   target="_blank"> Manual Práctico de Renta 2022</a>.
 
             </p>
             <p className="text-xs">

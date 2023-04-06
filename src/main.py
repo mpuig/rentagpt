@@ -16,7 +16,7 @@ from langchain.vectorstores import VectorStore, Chroma
 from src.callback import StreamingLLMCallbackHandler
 from src.chains import build_yaml_documents, get_streaming_chain, get_filter_documents_chain
 from src.config import cfg, SRC_PATH
-from src.schemas import ChatResponse
+from src.schemas import BotResponse
 
 app = FastAPI(
     title="Renta GPT API",
@@ -73,7 +73,7 @@ async def favicon():
     return FileResponse(path=os.path.join(SRC_PATH, "public", "favicon.ico"))
 
 
-@app.websocket("/chat")
+@app.websocket("/query")
 async def websocket_endpoint(websocket: WebSocket):
     global docsearch
 
@@ -97,10 +97,10 @@ async def websocket_endpoint(websocket: WebSocket):
                 persist_directory=cfg.chroma.persist_directory,
             )
 
-        resp = ChatResponse(sender="you", message=data["query"], type="stream")
+        resp = BotResponse(sender="you", message=data["query"], type="stream")
         await websocket.send_json(resp.dict())
 
-        start_resp = ChatResponse(sender="bot", message="", type="start")
+        start_resp = BotResponse(sender="bot", message="", type="start")
         await websocket.send_json(start_resp.dict())
 
         query_results = docsearch.max_marginal_relevance_search(
@@ -123,7 +123,7 @@ async def websocket_endpoint(websocket: WebSocket):
             result_results = []
 
         result_json = {"sources": result_results}
-        links = ChatResponse(sender="bot", message=json.dumps(result_json), type="info")
+        links = BotResponse(sender="bot", message=json.dumps(result_json), type="info")
         await websocket.send_json(links.dict())
 
         sources = [source['source'] for source in result_results]
@@ -135,14 +135,14 @@ async def websocket_endpoint(websocket: WebSocket):
             "documents": filtered_documents,
         })
 
-        end_resp = ChatResponse(sender="bot", message="", type="end")
+        end_resp = BotResponse(sender="bot", message="", type="end")
         await websocket.send_json(end_resp.dict())
     except WebSocketDisconnect:
         logging.info("websocket disconnect")
         return
     except Exception as e:
         logging.error(e)
-        resp = ChatResponse(
+        resp = BotResponse(
             sender="bot",
             message="Sorry, something went wrong. Try again.",
             type="error",
