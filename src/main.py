@@ -7,15 +7,15 @@ from typing import Optional
 import yaml
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from fastapi.websockets import WebSocket, WebSocketDisconnect
 from langchain import OpenAI, LLMChain
 from langchain import PromptTemplate
 from langchain.callbacks.base import AsyncCallbackManager
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import VectorStore, Chroma
-from starlette.responses import FileResponse
-from starlette.staticfiles import StaticFiles
-from starlette.templating import Jinja2Templates
 
 from src.callback import StreamingLLMCallbackHandler
 from src.config import cfg, SRC_PATH
