@@ -108,7 +108,7 @@ async def websocket_endpoint(websocket: WebSocket):
         })
         result_text = result['text'].replace("```json", "").replace("```", "")
 
-        result_json = {"sources": json.loads(result_text)}
+        result_json = {"sources": json.loads(result_text)["results"]}
         links = ChatResponse(sender="bot", message=json.dumps(result_json), type="info")
         await websocket.send_json(links.dict())
 
