@@ -18,9 +18,15 @@ from src.chains import build_yaml_documents, get_streaming_chain, get_filter_doc
 from src.config import cfg, SRC_PATH
 from src.schemas import ChatResponse
 
-app = FastAPI(debug=True, version="0.9.0", title="Renta GPT API")
+app = FastAPI(
+    title="Renta GPT API",
+    description="A retrieval engine about Renta 2022 (Spanish Taxes).",
+    version="0.9.0",
+    servers=[{"url": "https://rentagpt.com"}],
+)
 
 app.mount("/public", StaticFiles(directory=os.path.join(SRC_PATH, "public")), name="public")
+app.mount("/.well-known", StaticFiles(directory=os.path.join(SRC_PATH, ".well-known")), name="well-known")
 templates = Jinja2Templates(directory=os.path.join(SRC_PATH, "templates"))
 
 docsearch: Optional[VectorStore] = None
@@ -55,6 +61,11 @@ async def startup_event():
 @app.get("/")
 async def get(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+
+@app.get("/legal-info")
+async def get(request: Request):
+    return templates.TemplateResponse("legal-info.html", {"request": request})
 
 
 @app.get('/favicon.ico', include_in_schema=False)
@@ -142,10 +153,4 @@ async def websocket_endpoint(websocket: WebSocket):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(
-        app,
-        host=cfg.api.host,
-        port=cfg.api.port,
-        proxy_headers=True,
-        forwarded_allow_ips="*",
-    )
+    uvicorn.run(app, host=cfg.api.host, port=cfg.api.port, reload=True)

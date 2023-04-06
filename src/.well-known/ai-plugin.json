@@ -1,0 +1,19 @@
+{
+  "schema_version": "v1",
+  "name_for_model": "rentagpt",
+  "name_for_human": "Renta GPT",
+  "description_for_model": "Plugin for searching through the Manual Práctico de Renta 2022 documentation to find answers to questions and retrieve relevant information. Use it whenever a user asks something that might be relevant to taxes in Spain",
+  "description_for_human": "Search through Manual Práctico de Renta 2022 (AEAT).",
+  "auth": {
+    "type": "user_http",
+    "authorization_type": "bearer"
+  },
+  "api": {
+    "type": "openapi",
+    "url": "https://rentagpt.com/openapi.json",
+    "has_user_authentication": false
+  },
+  "logo_url": "https://rentagpt.com/.well-known/logo.png",
+  "contact_email": "marc.puig@gmail.com",
+  "legal_info_url": "https://rentagpt.com/legal-info"
+}
