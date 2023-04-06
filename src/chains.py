@@ -31,7 +31,7 @@ def get_filter_documents_chain(api_key: str) -> LLMChain:
         streaming=False,
         verbose=True,
         temperature=0.0,
-        max_tokens=500,
+        max_tokens=1000,
     )
     prompt = PromptTemplate(
         template=FILTER_DOCUMENTS_PROMPT_TEMPLATE,

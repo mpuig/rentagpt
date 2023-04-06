@@ -107,14 +107,18 @@ async def websocket_endpoint(websocket: WebSocket):
             "documents": documents,
         })
         result_text = result['text'].replace("```json", "").replace("```", "")
+
         result_json = {"sources": json.loads(result_text)}
         links = ChatResponse(sender="bot", message=json.dumps(result_json), type="info")
         await websocket.send_json(links.dict())
 
         streaming_chain = get_streaming_chain(stream_handler, api_key)
+        sources = [source['source'] for source in result_json['sources']]
+        filtered_query_results = list(filter(lambda x: x.metadata['source'] in sources, query_results))
+        filtered_documents = build_yaml_documents(filtered_query_results)
         result = await streaming_chain.acall({
             "question": question,
-            "documents": result['text'],
+            "documents": filtered_documents,
         })
 
         end_resp = ChatResponse(sender="bot", message="", type="end")

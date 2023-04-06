@@ -25,7 +25,7 @@ export const Answer: FC<AnswerProps> = ({ query, sources, answer, done, onReset 
           <div className="border-b border-zinc-800 pb-4">
             <div className="text-md text-blue-500">Fuentes</div>
 
-            {sources.map((source, index) => (
+            {Array.isArray(sources) && sources.map((source, index) => (
               <div
                 key={index}
                 className="mt-1 overflow-auto"
