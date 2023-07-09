@@ -18,6 +18,29 @@ possible to run semantic searches through it.
 Given a query, RentaGPT fetches relevant information from the database, and then it prompts OpenAI GPT-3 API to generate
 an answer from the more relevant documents found in the initial step.
 
+## How to run it locally
+
+First build the `index.html` from the `frontend` directory
+
+```bash
+cd frontend
+npm install && npm run build
+cp dist/index.html ../src/templates
+```
+
+Move to the project root, create a copy of the env file
+
+```bash
+cd ..
+cp .env.template .env
+```
+
+Fill in the `.env` file with your credentials and run the project
+
+```bash
+uvicorn src.main:app --env-file .env
+```
+
 ## How to deploy to fly.io
 
 Create an account to [fly.io](https://fly.io)
